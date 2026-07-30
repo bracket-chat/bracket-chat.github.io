@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="style.css">
+        <script src="script.js"></script>
+    </head>
+    <body>
+        <div id="main">
+            <div id="info-div">
+                INFO
+                <ul>
+                    <li style="color: red; font-weight: bold;">
+                        nothing about this is secure!
+                    </li>
+                    <li style="color: red">
+                        passwords are stored safely but you still shouldn't
+                        reuse passwords.
+                    </li>
+                    <li style="color: red">
+                        don't send any personal information etc.
+                    </li>
+                    <li style="color: red">
+                        despite the use of passwords, a message attributed to
+                        a given user very well could have been written by someone
+                        else. don't blindly trust stuff!
+                    </li>
+                    <li>
+                        default password is empty string
+                        (just hit enter when prompted)
+                    </li>
+                    <li>
+                        sign in to an unused account ("User &lt;num&gt;")
+                        and reset password/name to make an account
+                    </li>
+                    <li>have fun</li>
+                </ul>
+            </div>
+            <div id="users-div">
+                users:
+                <ul id="users"></ul>
+                signed in as <span id="signed-in-as">(not signed in)</span>
+                <button id="sign-out">sign out</button>
+                <br>
+                <button id="change-pass" disabled>change password</button>
+                <br>
+                <button id="change-name" disabled>change username</button>
+                <br>
+                <button id="change-col" disabled>change color</button>
+                <br><br>
+                <button id="reload-users">reload user data</button>
+                <br>
+                <button id="reload-msgs">reload messages</button>
+            </div>
+            <div id="msgs-div">
+                <textarea></textarea>
+                <button id="go">send</button>
+                <span id="loading-msgs" style="visibility: hidden;">loading messages...</span>
+                <span id="lock" style="visibility: hidden;">lock is held by <span id="locked-by"></span></span>
+                <ul id="msgs"></ul>
+            </div>
+        </div>
+    </body>
+</html>
