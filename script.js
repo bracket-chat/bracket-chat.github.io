@@ -458,7 +458,6 @@ async function resetUsers() {
             resolve(false);
             return;
         }
-        players = [];
         let doneNames = 0;
         let doneCols = 0;
         let donePasses = 0;
