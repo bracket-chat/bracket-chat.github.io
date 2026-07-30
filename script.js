@@ -24,6 +24,8 @@ let msgReadingIndex = 0;
 let players = [];
 let msgs = [];
 
+let loadingThingsTimeout = -1;
+
 class Player {
     constructor(id) {
         this.id = id;
@@ -409,7 +411,7 @@ async function loadNextMessages() {
     }
     msgs.push(msg);
     msg.draw();
-    return await loadNextMessages();
+    await loadNextMessages();
 }
 
 function drawPlayers() {
@@ -571,7 +573,7 @@ function minutesToString(minutes) {
 
 async function loadNewThings() {
     await loadNextMessages();
-    setTimeout(loadNewThings, 1000);
+    loadingThingsTimeout = setTimeout(loadNewThings, 1000);
 }
 
 onload = async () => {
@@ -614,8 +616,12 @@ onload = async () => {
     document.getElementById('reload-users').onclick = () => {
         loadPlayerData();
     }
-    document.getElementById('reload-msgs').onclick = () => {
-        loadAllMessages();
+    document.getElementById('reload-msgs').onclick = async () => {
+        clearTimeout(loadingThingsTimeout);
+        setTimeout(async () => {
+            await loadAllMessages();
+            loadingThingsTimeout = setTimeout(loadNewThings, 1000);
+        }, 500);
     }
 
     const signedInAs = parseInt(localStorage.getItem('bracket-chat-signed-in-as'));
@@ -625,5 +631,5 @@ onload = async () => {
 
     await loadAllMessages();
 
-    setTimeout(loadNewThings, 1000);
+    loadingThingsTimeout = setTimeout(loadNewThings, 1000);
 }
