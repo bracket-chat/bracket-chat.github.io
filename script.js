@@ -1,13 +1,4 @@
 
-/**
-
-@TODO
-* voting for resetting msgs and stuff(?)
-
-// p@ssw0rd
-
-*/
-
 let playerId = -1;
 const playerCount = 8;
 // BYTE indices
@@ -25,6 +16,7 @@ let players = [];
 let msgs = [];
 
 let loadingThingsTimeout = -1;
+let showTimestamps = true;
 
 class Player {
     constructor(id) {
@@ -52,11 +44,27 @@ class Message {
             return;
         }
         this.msg = '';
-        this.user = bytes[0];
-        this.type = bytes[1];
-        for (let i=2; i<bytes.length; i++) {
-            if (bytes[i] === 0) break;
-            this.msg += String.fromCharCode(bytes[i]);
+        this.timestamp = -1;
+        let byte = 0;
+        this.user = bytes[byte++];
+        this.type = bytes[byte++];
+        switch (this.type) {
+            case 1:
+                break;
+            case 2:
+                this.timestamp = 0;
+                for (let i=0; i<3; i++) {
+                    this.timestamp |= bytes[byte++] << (i*8);
+                }
+                const now = getCurrentMinute();
+                while (now - this.timestamp >= 2**24) {
+                    this.timestamp += 2**24;
+                }
+                break;
+        }
+        while (byte < bytes.length) {
+            if (bytes[byte] === 0) break;
+            this.msg += String.fromCharCode(bytes[byte++]);
         }
     }
     toString() {
@@ -73,8 +81,21 @@ class Message {
         nameElem.style.color = player === undefined ? 'gray' : player.color;
         const msgElem = document.createElement('span');
         msgElem.textContent = msg.msg;
-
-        li.append('[',nameElem,'] ',msgElem);
+        if (showTimestamps) {
+            const timestampElem = document.createElement('span');
+            if (msg.timestamp !== -1) {
+                timestampElem.style.color = 'gray';
+                timestampElem.textContent = timestampToString(msg.timestamp);
+            }
+            else {
+                timestampElem.style.color = 'gray';
+                timestampElem.textContent = 'no timestamp';
+            }
+            li.append('[',nameElem,'] (',timestampElem,')',document.createElement('br'),msgElem);
+        }
+        else {
+            li.append('[',nameElem,'] ',msgElem);
+        }
     }
 }
 
@@ -184,12 +205,30 @@ async function writeString(type, str) {
     if (!(await takeLock())) {
         return false;
     }
-    let arr = new Uint8Array(str.length+4);
-    arr[0] = playerId;
-    arr[1] = type;
-    for (let i=0; i<str.length; i++) {
-        arr[i+2] = str.charCodeAt(i);
+    let arr = [];
+    let byte = 0;
+    arr.push(playerId);
+    arr.push(type);
+    switch (type) {
+        case 1:
+            break;
+        case 2:
+            let currentMinute = getCurrentMinute();
+            for (let i=0; i<3; i++) {
+                arr.push(currentMinute >> (i*8));
+            }
+            break;
+        default:
+            alert(`invalid message type! ${type} ${str}`);
+            return;
     }
+    for (let i=0; i<str.length; i++) {
+        arr.push(str.charCodeAt(i));
+    }
+    for (let i=0; i<2; i++) {
+        arr.push(0);
+    }
+    arr = new Uint8Array(arr);
     await writeBytesTo(msgStartIndex + msgReadingIndex, arr);
     const msg = new Message(arr);
     msgs.push(msg);
@@ -512,7 +551,7 @@ async function takeLock(id, force) {
     }
     const bytesToWrite = new Uint8Array(4);
     bytesToWrite[0] = id;
-    const currentMinute = Math.floor(Date.now()/1000/60);
+    const currentMinute = getCurrentMinute();
     for (let i=0; i<3; i++) {
         bytesToWrite[i+1] = currentMinute >> (i*8);
     }
@@ -523,7 +562,7 @@ async function takeLock(id, force) {
 async function queryLock() {
     const lockData = await readFixedBytes(lockIndex, 4);
     const lockingPlayer = lockData[0];
-    const currentMinute = Math.floor(Date.now()/1000/60);
+    const currentMinute = getCurrentMinute();
     let lockTimestamp = 0;
     for (let i=0; i<3; i++) {
         lockTimestamp |= lockData[i+1] << (i*8);
@@ -561,6 +600,10 @@ function drawLock(lock) {
     }
 }
 
+function getCurrentMinute() {
+    return Math.floor(Date.now()/1000/60);
+}
+
 function minutesToString(minutes) {
     let s = '';
     let hours = Math.floor(minutes/60);
@@ -570,9 +613,23 @@ function minutesToString(minutes) {
     return s;
 }
 
+function timestampToString(timestamp) {
+    const date = new Date(timestamp*1000*60);
+    const dateStr = date.toLocaleDateString();
+    const arr = date.toLocaleTimeString().split(' ');
+    const timeArr = arr[0].split(':');
+    return dateStr+' '+timeArr[0]+':'+timeArr[1]+' '+arr[1];
+}
+
 async function loadNewThings() {
     await loadNextMessages();
     loadingThingsTimeout = setTimeout(loadNewThings, 1000);
+}
+
+async function writeFromTextBox() {
+    const text = document.getElementsByTagName('textarea')[0].value;
+    document.getElementsByTagName('textarea')[0].value = '';
+    writeString(2, text);
 }
 
 onload = async () => {
@@ -583,15 +640,11 @@ onload = async () => {
     document.getElementsByTagName('textarea')[0].onkeydown = e => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            const text = document.getElementsByTagName('textarea')[0].value;
-            document.getElementsByTagName('textarea')[0].value = '';
-            writeString(1, text);
+            writeFromTextBox();
         }
     }
     document.getElementById('go').onclick = () => {
-        const text = document.getElementsByTagName('textarea')[0].value;
-        document.getElementsByTagName('textarea')[0].value = '';
-        writeString(1, text);
+        writeFromTextBox();
     }
 
     document.getElementById('sign-out').onclick = () => signOut();
@@ -623,10 +676,26 @@ onload = async () => {
         }, 500);
     }
 
+    document.getElementById('show-timestamps').oninput = e => {
+        showTimestamps = e.target.checked;
+        localStorage.setItem('bracket-chat-show-timestamps', showTimestamps);
+        redraw();
+    }
+
+    document.getElementById('reset-users').onclick = () => {
+        resetUsers();
+    }
+
+    document.getElementById('reset-msgs').onclick = () => {
+        clearMessages();
+    }
+
     const signedInAs = parseInt(localStorage.getItem('bracket-chat-signed-in-as'));
     if (signedInAs !== NaN && signedInAs !== -1) {
         signIn(signedInAs);
     }
+    showTimestamps = JSON.parse(localStorage.getItem('bracket-chat-show-timestamps') ?? 'true');
+    document.getElementById('show-timestamps').checked = showTimestamps;
 
     await loadAllMessages();
 
