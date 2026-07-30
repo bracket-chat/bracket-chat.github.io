@@ -615,10 +615,11 @@ function minutesToString(minutes) {
 
 function timestampToString(timestamp) {
     const date = new Date(timestamp*1000*60);
-    const dateStr = date.toLocaleDateString();
-    const arr = date.toLocaleTimeString().split(' ');
-    const timeArr = arr[0].split(':');
-    return dateStr+' '+timeArr[0]+':'+timeArr[1]+' '+arr[1];
+    return date.getFullYear().toString().padStart(4,0)+'-'+
+           (date.getMonth()+1).toString().padStart(2,0)+'-'+
+           date.getDate().toString().padStart(2,0)+' '+
+           date.getHours().toString().padStart(2,0)+':'+
+           date.getMinutes().toString().padStart(2,0);
 }
 
 async function loadNewThings() {
