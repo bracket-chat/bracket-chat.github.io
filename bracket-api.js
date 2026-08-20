@@ -381,9 +381,9 @@ export async function setFile(startIndex, file, trackingObj=null, timeout=DEFAUL
         bytesToSet[i] = file.name.charCodeAt(i);
     }
     bytesToSet.set(await file.bytes(), file.name.length+1);
-    trackingObj.overrideCompletionCondition = true;
+    if (trackingObj) trackingObj.overrideCompletionCondition = true;
     await setDayValue(startIndex, bytesToSet.length, 0, trackingObj);
-    trackingObj.overrideCompletionCondition = false;
+    if (trackingObj) trackingObj.overrideCompletionCondition = false;
     return await setBytes(startIndex+1, bytesToSet, 0, trackingObj, timeout);
 }
 
